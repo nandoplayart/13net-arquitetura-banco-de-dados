@@ -11,33 +11,50 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
-            bool bResp = true;
+            //Perguntas();
+            Chamada();
+            Console.ReadKey();
+        }
+
+        static void Perguntas()
+        {
             string channel = "perguntas";
-            string connectionsString = "127.0.0.1:6379";
+            string connectionsString = "191.232.234.20:6379";
+            //string connectionsString = "127.0.0.1:6379";
             var redis = ConnectionMultiplexer.Connect(connectionsString);
             var db = redis.GetDatabase();
 
             Console.WriteLine("Aguardando perguntas: ");
-
+            Eval eval = new Eval();
             var sub = redis.GetSubscriber();
             sub.Subscribe(channel, (ch, msg) =>
             {
-                bResp = !bResp;
                 string resp = (msg.ToString().Contains(":")) ? msg.ToString().Split(':')[0] : msg.ToString();
-                db.HashSet(resp, "Delphos", GetRespose(bResp));
+                db.HashSet(resp, "Delphos", eval.Resposta(msg.ToString().Split(':')[1]));
                 Console.WriteLine($"Para a pergunta '{msg.ToString()}' a resposta foi '{db.HashGet(resp, "Delphos")}'");
             });
-            Console.ReadKey();
         }
 
-        private static Random rnd = new Random();
-        private static string GetRespose(bool b)
+        static void Chamada()
         {
-            var choices = b
-                ? new[] { "Very good!", "Excellent!", "Nice work!", "Keep up the good work!", }
-                : new[] { "Bad!", "V Bad!", "VV Bad!", "VVV Bad!", };
+            string channel = "Chamada";
+            //string connectionsString = "191.232.234.20:6379";
+            string connectionsString = "127.0.0.1:6379";
+            var redis = ConnectionMultiplexer.Connect(connectionsString);
+            var db = redis.GetDatabase();
 
-            return choices[rnd.Next(0, choices.Length)];
+            Console.WriteLine("Aguardando Nomes: ");
+            Eval eval = new Eval();
+            var sub = redis.GetSubscriber();
+            sub.Subscribe(channel, (ch, msg) =>
+            {
+                string resp = (msg.ToString().Contains(":")) ? msg.ToString().Split(':')[0] : msg.ToString();
+                if (eval.Presente(resp))
+                {
+                    db.HashSet("Chamada", resp, "Presente");
+                    Console.WriteLine($"Aluno '{msg.ToString()}' esta '{db.HashGet("Chamada", resp)}'");
+                }
+            });
         }
     }
 }
